@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Like/Dislike</title>
+<style>
+  .vote-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: system-ui, sans-serif;
+  }
+
+  .vote-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: white;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .08s ease, background .12s ease;
+  }
+  .vote-btn:active { transform: translateY(1px); }
+  .vote-btn[disabled] { opacity: 0.5; cursor: default; }
+
+  .thumb {
+    font-size: 16px; /* Icon-Größe */
+    display: inline-block;
+    width: 18px;
+    text-align: center;
+  }
+
+  .count {
+    min-width: 28px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* optional: aktuell gewählte Farbe */
+  .selected {
+    background: rgba(0, 120, 212, 0.08);
+    border-color: rgba(0,120,212,0.18);
+  }
+</style>
+</head>
+<body>
+
+<div class="vote-row" aria-live="polite">
+  <button id="btn-up" class="vote-btn" title="Daumen hoch">
+    <span class="thumb">👍</span>
+    <span id="count-up" class="count">…</span>
+  </button>
+
+  <button id="btn-down" class="vote-btn" title="Daumen runter">
+    <span class="thumb">👎</span>
+    <span id="count-down" class="count">…</span>
+  </button>
+</div>
+
+<script type="module">
+  // Firebase SDK (modular)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import {
+    getDatabase, ref, onValue, runTransaction
+  } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+  // ⬇️ HIER DEINE KONFIGURATION EINSETZEN
+    const firebaseConfig = {
+  apiKey: "AIzaSyBiD90ugPBxM0T8GpLbq4by8QlPt0MrTqk",
+  authDomain: "like-bt.firebaseapp.com",
+  databaseURL: "https://like-bt-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "like-bt",
+  storageBucket: "like-bt.firebasestorage.app",
+  messagingSenderId: "191618095362",
+  appId: "1:191618095362:web:b881e568dd2d9c0e8a4a1b"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Pfad in der DB — passt an, falls du pro Seite eigene Counter willst (z.B. "likes/page-1/up")
+  const upRef = ref(db, 'likes/up');
+  const downRef = ref(db, 'likes/down');
+
+  const btnUp = document.getElementById('btn-up');
+  const btnDown = document.getElementById('btn-down');
+  const countUpEl = document.getElementById('count-up');
+  const countDownEl = document.getElementById('count-down');
+
+  // key im localStorage zur Verhinderung mehrfacher Klicks
+  const LS_KEY = 'like-bt-user-vote'; // speichert: "up" | "down" | null
+
+  // initial: UI nach aktuellem localStorage Zustand markieren
+  function refreshLocalSelection() {
+    const val = localStorage.getItem(LS_KEY);
+    btnUp.classList.toggle('selected', val === 'up');
+    btnDown.classList.toggle('selected', val === 'down');
+  }
+  refreshLocalSelection();
+
+  // Live-Updates aus DB
+  onValue(upRef, snap => {
+    const v = snap.val();
+    countUpEl.textContent = (v ?? 0);
+  });
+
+  onValue(downRef, snap => {
+    const v = snap.val();
+    countDownEl.textContent = (v ?? 0);
+  });
+
+  // Helper: atomare Änderung hochzählen
+  async function increment(refNode) {
+    return runTransaction(refNode, current => {
+      return (current || 0) + 1;
+    });
+  }
+  // Helper: atomare Änderung runterzählen (unterer Grenzwert 0)
+  async function decrement(refNode) {
+    return runTransaction(refNode, current => {
+      const now = (current || 0) - 1;
+      return now >= 0 ? now : 0;
+    });
+  }
+
+  
+
+  
+ // Einfacher: jeder Klick addiert +1 (kein localStorage, kein Toggle)
+btnUp.addEventListener('click', async () => {
+  btnUp.disabled = true;
+  try {
+    await runTransaction(upRef, current => (current || 0) + 1);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btnUp.disabled = false;
+  }
+});
+
+btnDown.addEventListener('click', async () => {
+  btnDown.disabled = true;
+  try {
+    await runTransaction(downRef, current => (current || 0) + 1);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btnDown.disabled = false;
+  }
+});
+
+
+
+  // (Optional) Bei erstmaligem Laden sicherstellen, dass DB Keys existieren:
+  // Nicht notwendig, runTransaction erstellt / behandelt null automatisch.
+</script>
+
+</body>
+</html>

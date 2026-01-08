@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Like Counter</title>
+  <style>
+  .like-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;       /* Abstand zwischen Button und Zähler */
+    font-family: sans-serif;
+    font-size: 16px;
+  }
+
+  #like-btn {
+    padding: 4px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #f0f0f0;
+  }
+</style>
+</head>
+<body>
+
+<div class="like-row">
+  <button id="like-btn">👍</button>
+  <span id="count">0</span>
+</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, get, set, onValue }
+      from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    // ⬇️ HIER DEINE KONFIGURATION EINSETZEN
+    const firebaseConfig = {
+  apiKey: "AIzaSyBiD90ugPBxM0T8GpLbq4by8QlPt0MrTqk",
+  authDomain: "like-bt.firebaseapp.com",
+  databaseURL: "https://like-bt-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "like-bt",
+  storageBucket: "like-bt.firebasestorage.app",
+  messagingSenderId: "191618095362",
+  appId: "1:191618095362:web:b881e568dd2d9c0e8a4a1b"
+};
+
+    // Firebase initialisieren
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const likeRef = ref(db, "likes/count");
+
+    const countElement = document.getElementById("count");
+    const likeButton = document.getElementById("like-btn");
+
+    // Live-Update
+    onValue(likeRef, (snapshot) => {
+      const value = snapshot.val();
+      countElement.textContent = value ?? 0;
+    });
+
+    // Bei Klick: +1 speichern
+    likeButton.addEventListener("click", async () => {
+      const snapshot = await get(likeRef);
+      const current = snapshot.val() ?? 0;
+      await set(likeRef, current + 1);
+    });
+  </script>
+
+</body>
+</html>
